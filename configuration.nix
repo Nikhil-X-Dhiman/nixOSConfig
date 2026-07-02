@@ -75,7 +75,7 @@
     "i915.enable_psr=0"                     # Default: 1. Current: 0 (Fixes display micro-stutters)
     "i915.enable_fbc=0"                     # Default: 1. Current: 0 (Fixes atomic update failure logs on Kaby Lake)
     "nowatchdog"                            # Default: not set. Current: Stops periodic CPU wakeups
-    "i915.enable_guc=2"                     # Default: 0. Current: 2 (HuC firmware offloading)
+    # "i915.enable_guc=2"                     # Default: 0. Current: 2 (HuC firmware offloading)
     "pci=noaer"                             # Default: not set. Current: Suppress harmless PCIe correctable error log spam
   ];
 
@@ -335,14 +335,11 @@
   # Default: "". Current: Optimizes NVMe and aggressively removes NVIDIA GPU from PCI bus.
   services.udev.extraRules = ''
     # NVMe flash storage performance pathing
-    ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="nvme*", ATTR{queue/scheduler}="none"
-
-    # Completely remove the NVIDIA VGA/3D Graphics Controller from the PCI bus
-    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", ATTR{power/control}="auto", ATTR{remove}="1"
-    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", ATTR{power/control}="auto", ATTR{remove}="1"
-
-    # Remove the paired NVIDIA HDMI Audio controller to prevent phantom power draw
-    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{power/control}="auto", ATTR{remove}="1"
+    # Enable runtime power management (allows GPU to enter D3cold when idle/driverless)
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", ATTR{power/control}="auto"
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", ATTR{power/control}="auto"
+    # Enable runtime power management for the paired NVIDIA HDMI Audio controller
+    ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{power/control}="auto"
   '';
 
   # services.thermald.enable: Prevents Intel CPUs from overheating.
