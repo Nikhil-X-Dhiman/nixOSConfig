@@ -411,7 +411,7 @@
 
   # services.irqbalance.enable: Distributes hardware interrupts across CPUs.
   # Default: false. Current: true.
-  services.irqbalance.enable = true;
+  services.irqbalance.enable = false;
 
   # services.openssh.enable: Enables SSH daemon.
   # Default: false. Current: true (Hardened: key-only auth, no root login).
@@ -505,8 +505,9 @@
       PCIE_ASPM_ON_BAT = "powersave";
 
       # PCI Runtime Power Management
-      RUNTIME_PM_ON_AC = "on";           # Keep PCI devices always on while plugged in
+      RUNTIME_PM_ON_AC = "auto";         # Auto-suspend idle PCI devices on AC
       RUNTIME_PM_ON_BAT = "auto";        # Auto-suspend idle PCI devices on battery
+      RUNTIME_PM_ENABLE = "01:00.0";     # Force runtime PM to auto for the NVIDIA GPU on AC
     };
   };
 
@@ -566,10 +567,35 @@
   # Default: []. Current: Core fonts and emoji support.
   fonts.packages = with pkgs; [
     nerd-fonts.fira-code   # Default: unset. Current: Monospace font with ligatures
+    dejavu_fonts           # Provides flawless fallback structures for Braille and terminal boxes
     noto-fonts             # Default: unset. Current: Universal fallback font
     noto-fonts-cjk-sans    # Default: unset. Current: Asian language support
     noto-fonts-color-emoji # Default: unset. Current: Emoji support
+    liberation_ttf         # Metric-compatible Microsoft font fallbacks
   ];
+
+
+  fonts.fontconfig = {
+    enable = true;
+    defaultFonts = {
+      monospace = [ "FiraCode Nerd Font" "DejaVu Sans Mono" "Noto Color Emoji" ];
+      sansSerif = [ "DejaVu Sans" "Noto Sans" "Noto Color Emoji" ];
+      serif = [ "DejaVu Serif" "Noto Serif" "Noto Color Emoji" ];
+      emoji = [ "Noto Color Emoji" ];
+    };
+    # Reject FreeMono to prevent ugly/misaligned Braille rendering in btop and other tools
+    localConf = ''
+      <selectfont>
+        <rejectfont>
+          <pattern>
+            <patelt name="family">
+              <string>FreeMono</string>
+            </patelt>
+          </pattern>
+        </rejectfont>
+      </selectfont>
+    '';
+  };
 
   # ──────────────────────────────────────────────────────────────────────
   #  PROGRAMS (ZSH, GIT, STARSHIP, ETC)
