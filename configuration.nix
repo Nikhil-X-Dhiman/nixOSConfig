@@ -1066,6 +1066,32 @@
   # Default: true. Current: false (Saves disk space).
   systemd.coredump.enable = false;
 
+  # Custom service to completely disable and power off NVIDIA dGPU on boot and resume.
+  # This resolves both:
+  # 1. 65-second resume lag (caused by kernel trying to initialize detached PCI device).
+  # 2. Hard lockups/freezes when entering S3 suspend on AC power (caused by driverless GPU in D0).
+  systemd.services.nvidia-dgpu-poweroff = {
+    description = "Completely disable and power off NVIDIA dGPU";
+    wantedBy = [ "multi-user.target" "post-resume.target" ];
+    after = [ "systemd-modules-load.service" "local-fs.target" "post-resume.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = pkgs.writeShellScript "nvidia-dgpu-poweroff" ''
+        # 1. Remove NVIDIA GPU from PCIe bus to prevent kernel from touching it during sleep/resume
+        if [ -e /sys/bus/pci/devices/0000:01:00.0 ]; then
+          echo "Removing NVIDIA GPU from PCIe bus..."
+          echo 1 > /sys/bus/pci/devices/0000:01:00.0/remove
+        fi
+        # 2. Send ACPI call to cut power rails completely
+        if [ -e /proc/acpi/call ]; then
+          echo "Sending ACPI _OFF command to PEGP..."
+          echo '\_SB.PCI0.RP01.PEGP._OFF' > /proc/acpi/call
+        fi
+      '';
+    };
+  };
+
   # ──────────────────────────────────────────────────────────────────────
   #  ENVIRONMENT
   # ──────────────────────────────────────────────────────────────────────
